@@ -1,6 +1,7 @@
 #include <stdbool.h>
 #include "gameFunctions.h"
 
+
 //Használat: megnézi, hogy a kattintás helye a játéktéren belül van-e.
 bool inTiles(int x, int y, int rows, int cols){
     return (x>=0 && x < rows && y>=0 && y<cols);
@@ -39,6 +40,40 @@ void generateBombs(int startRow, int startCol, int bombNum, DinRect *DinTiles){ 
 }
 
 
+void changeTileNumber(DinRect *DinTiles, int newRow, int newCol, int cellSize){
+//    if(DinTiles->tiles != NULL){
+//        for(int i = 0; i < DinTiles->rows; i++){
+//            free(tiles[i]);
+//        }
+//        free(tiles);
+//    }
+
+    DinTiles->tiles = (Rect**) malloc(newRow * sizeof(Rect*));
+    for(int i = 0; i < newRow; i++){
+        DinTiles->tiles[i] = (Rect*) malloc(newCol * sizeof(Rect));
+    }
+
+    DinTiles->rows = newRow;
+    DinTiles->cols = newCol;
+
+    for(int i = 0; i < DinTiles->rows; i++){
+        for(int j = 0; j < DinTiles->cols; j++){
+            DinTiles->tiles[i][j] = (Rect){i*cellSize, j*cellSize, cellSize, false, false, false, false, false, 0};
+        }
+    }
+}
+
+
+
+void calculateDistance(DinRect *DinTiles, double *distance, double cellSize, int width){
+    double tilesLength = 0;
+    for(int i = 0; i < DinTiles->rows; i++){
+        tilesLength += cellSize;
+    }
+    *distance = width/2 - tilesLength/2;
+}
+
+
 
 /*
     Alapértékeket állít be a következő adatoknak:
@@ -46,7 +81,7 @@ void generateBombs(int startRow, int startCol, int bombNum, DinRect *DinTiles){ 
     mezők sor- és oszlopszáma
     bombák száma
 */
-void setup(bool *generated, bool *inGame, int *row, int rowNum, int *col, int colNum, int *bombNum, int *flagNum, int bombs/*, Rect **tiles, int cellSize*/){
+void setup(bool *generated, bool *inGame, int *row, int rowNum, int *col, int colNum, int *bombNum, int *flagNum, int bombs){
     *generated = false;
     *inGame = true;
     *row = rowNum;
@@ -75,7 +110,7 @@ void revealAllBombs(DinRect *DinTiles){
 }
 
 void findZerosAround(int x, int y, DinRect *DinTiles){
-    if(inTiles(x,y,DinTiles->rows,DinTiles->cols) && !DinTiles->tiles[x][y].show && !DinTiles->tiles[x][y].isBomb){
+    if(inTiles(x,y,DinTiles->rows,DinTiles->cols) && !DinTiles->tiles[x][y].show && !DinTiles->tiles[x][y].isBomb && !DinTiles->tiles[x][y].isFlagged){
         DinTiles->tiles[x][y].show = true;
         if(DinTiles->tiles[x][y].bombsAround < 2){
             findZerosAround(x-1, y, DinTiles);
@@ -92,7 +127,7 @@ void revealTile(int x, int y, DinRect *DinTiles, bool *inGame){
         revealAllBombs(DinTiles);
         *inGame = false;
     }
-    else{
+    else if(!DinTiles->tiles[x][y].isFlagged){
         if(DinTiles->tiles[x][y].bombsAround < 2){
             findZerosAround(x,y,DinTiles);
         }
@@ -102,6 +137,23 @@ void revealTile(int x, int y, DinRect *DinTiles, bool *inGame){
     }
 }
 
-void flagTile(/**/){
 
+
+void flagTile(DinRect *DinTiles, int x, int y, int *flagNum, int bombNum){
+    if(!DinTiles->tiles[x][y].show){
+        if(*flagNum >= 0 && !DinTiles->tiles[x][y].isFlagged){
+            DinTiles->tiles[x][y].isFlagged = true;
+            if(!DinTiles->tiles[x][y].isBomb){
+                DinTiles->tiles[x][y].falseFlagged = true;
+            }
+            (*flagNum)--;
+        }
+        else if(*flagNum <= bombNum && DinTiles->tiles[x][y].isFlagged){
+            DinTiles->tiles[x][y].isFlagged = false;
+            if(DinTiles->tiles[x][y].falseFlagged){
+                DinTiles->tiles[x][y].falseFlagged = false;
+            }
+            (*flagNum)++;
+        }
+    }
 }
